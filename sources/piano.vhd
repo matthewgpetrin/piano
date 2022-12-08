@@ -3,12 +3,13 @@ use IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.STD_LOGIC_UNSIGNED.ALL;
 USE IEEE.NUMERIC_STD.ALL;
 
+-- Define piano ports --------------------------------------------------
 entity piano is
     port (
         clk_50MHz : in std_logic;
 
-        kp_col : out std_logic_vector(4 downto 1);
-        kp_row : in std_logic_vector(4 downto 1);
+        kpd_col : out std_logic_vector(4 downto 1);
+        kpd_row : in std_logic_vector(4 downto 1);
 
         dac_mclk : out std_logic;
         dac_lrck : out std_logic;
@@ -17,29 +18,24 @@ entity piano is
     );
 end piano;
 
+-- Define piano behavior
 architecture Behavioral of piano is
-    -- frequency constants for different notes 
-    -- frequency constants for different notes
-    -- try to represent given frequency in 14 bits
-    constant tone01 : unsigned (13 downto 0) := to_unsigned (351, 14); -- C
-    constant tone02 : unsigned (13 downto 0) := to_unsigned (372, 14); -- C#
-    constant tone03 : unsigned (13 downto 0) := to_unsigned (394, 14); -- D
-    constant tone04 : unsigned (13 downto 0) := to_unsigned (418, 14); -- Eb
-    constant tone05 : unsigned (13 downto 0) := to_unsigned (442, 14); -- E
-    constant tone06 : unsigned (13 downto 0) := to_unsigned (496, 14); -- F
-    constant tone07 : unsigned (13 downto 0) := to_unsigned (526, 14); -- F#
-    constant tone08 : unsigned (13 downto 0) := to_unsigned (557, 14); -- G
-    constant tone09 : unsigned (13 downto 0) := to_unsigned (591, 14); -- G#
-    constant tone10 : unsigned (13 downto 0) := to_unsigned (626, 14); -- A
-    constant tone11 : unsigned (13 downto 0) := to_unsigned (663, 14); -- Bb
-    constant tone12 : unsigned (13 downto 0) := to_unsigned (702, 14); -- B
+    -- Frequency constants - Passed to tone
+    constant note01 : unsigned (13 downto 0) := to_unsigned (351, 14); -- C
+    constant note02 : unsigned (13 downto 0) := to_unsigned (372, 14); -- C#
+    constant note03 : unsigned (13 downto 0) := to_unsigned (394, 14); -- D
+    constant note04 : unsigned (13 downto 0) := to_unsigned (418, 14); -- Eb
+    constant note05 : unsigned (13 downto 0) := to_unsigned (442, 14); -- E
+    constant note06 : unsigned (13 downto 0) := to_unsigned (496, 14); -- F
+    constant note07 : unsigned (13 downto 0) := to_unsigned (526, 14); -- F#
+    constant note08 : unsigned (13 downto 0) := to_unsigned (557, 14); -- G
+    constant note09 : unsigned (13 downto 0) := to_unsigned (591, 14); -- G#
+    constant note10 : unsigned (13 downto 0) := to_unsigned (626, 14); -- A
+    constant note11 : unsigned (13 downto 0) := to_unsigned (663, 14); -- Bb
+    constant note12 : unsigned (13 downto 0) := to_unsigned (702, 14); -- B
     -- http://www.sengpielaudio.com/calculator-notenames.htm (units of 0.745 Hz)
 
-    
-    -- enum for state machine state. 3 states for 3 waveforms
-    -- type t_state is (wave01, wave02, wave03);
-    
-    -- initialize in/out of keypad.vhd
+    -- Initialize keypad ports
     component keypad is
         port (
             clk : in std_logic;
@@ -50,7 +46,7 @@ architecture Behavioral of piano is
         );
     end component;
 
-    -- initialize in/out of tone.vhd
+    -- Initialize tone ports
     component tone is
         port (
             clk : in std_logic;
@@ -60,31 +56,31 @@ architecture Behavioral of piano is
         );
     end component;
 
-    -- initialize in/out of dtac.vhd
-    component dtac is
+    -- Initialize dac ports
+    component dac is
         port(
-            sclk : in std_logic;
-            l_start : in std_logic;
-            r_start : in std_logic;
+            clk : in std_logic;
+            l_load : in std_logic;
+            r_load : in std_logic;
             l_data : in signed (15 downto 0);
             r_data : in signed (15 downto 0);
-            sdata : out std_logic
+            data : out std_logic
         );
     end component;
 
-    -- signal definitions for keypad stuff
-    signal kp_cnt : std_logic_vector(20 downto 0);
-    signal kp_clk : std_logic;
-    signal kp_hit : std_logic;
-    signal sm_clk : std_logic; -- state machine clock
-    signal kp_val : std_logic_vector (3 downto 0);
-    signal sm_acc : std_logic_vector (2 downto 0);
+    -- Keypad signals
+    signal kpd_cnt : std_logic_vector(20 downto 0);
+    signal kpd_clk : std_logic;
+    signal kpd_hit : std_logic;
+    signal kpd_val : std_logic_vector (3 downto 0);
 
-    -- signal defintions for state machine - interacts with tone.vhd
-    -- signal sm_state : t_state;
-    -- signal nx_state : t_state;
+    -- Tone signals
+    signal ton_clk : std_logic;
+    signal ton_note : unsigned (13 downto 0);
+    signal ton_wave : unsigned (2 downto 0);
 
-    -- signal defintions for dac
+
+    -- DAC signals
     signal dac_cnt : unsigned (19 downto 0) := (others => '0');
     signal dac_l_load : std_logic;
     signal dac_r_load : std_logic;
@@ -92,20 +88,20 @@ architecture Behavioral of piano is
     signal dac_r_data : signed (15 downto 0);
     signal dac_clk : std_logic;
 
-    -- signal definitions for tone
-    signal tn_clk : std_logic;
-    signal tn_note : unsigned (13 downto 0);
-    signal tn_wave : unsigned (2 downto 0);
 
 begin
-    -- process:
-    -- sends data to dac
-    -- increments keypad counter for scanning
-    clk_proc : process(clk_50MHz)
+    -- Keypad count process
+    kpd_cnt_proc : process(clk_50MHz)
     begin
         if rising_edge(clk_50MHz) then
-            kp_cnt <= kp_cnt + 1; -- increment keypad counter
+            kpd_cnt <= kpd_cnt + 1; -- increment keypad counter
+        end if;
+    end process;
 
+    -- DAC counting and loading process
+    dac_cnt_proc : process(clk_50MHz)
+    begin
+        if rising_edge(clk_50MHz) then
             if (dac_cnt(9 downto 0) >= X"00F") AND (dac_cnt(9 downto 0) < X"02E") then
                 dac_l_load <= '1';
             else
@@ -122,98 +118,92 @@ begin
         end if;
     end process;
 
-    -- state machine and keypad clocks
-    kp_clk <= kp_cnt(15);
-    sm_clk <= kp_cnt(20);
-
-
-    -- dac stuff - this is just copied
-    dac_mclk <= NOT dac_cnt(1);
-    tn_clk <= dac_cnt(9);
-    dac_lrck <= tn_clk;
+    -- Subfile clocks
+    kpd_clk <= kpd_cnt(15);
+    ton_clk <= dac_cnt(9);
     dac_clk <= dac_cnt(4);
+
+    -- DAC output clocks
+    dac_mclk <= NOT dac_cnt(1);
+    dac_lrck <= ton_clk;
     dac_sclk <= dac_clk;
 
-    -- instantiates keypad and assignes in/out
+    -- Keypad port map
     kp : keypad
     port map(
-        clk => kp_clk,
-        col => kp_col,
-        row => kp_row,
-        val => kp_val,
-        hit => kp_hit
+        clk => kpd_clk,
+        col => kpd_col,
+        row => kpd_row,
+        val => kpd_val,
+        hit => kpd_hit
     );
     
-    -- instantiates tone and assigns in/out
-    tn : tone
+    -- Tone port map
+    ton : tone
     port map(
-        clk => tn_clk,
-        note => tn_note,
-        -- wave => sm_state,
+        clk => ton_clk,
+        note => ton_note,
         data => dac_l_data
     );
     dac_r_data <= dac_l_data;
 
-    -- instantiates dtac and assigns in/out
-    dac : dtac
+    -- DAC port map
+    dc : dac
     port map (
-        sclk => dac_clk,
-        l_start => dac_l_load,
-        r_start => dac_r_load,
+        clk => dac_clk,
+        l_load => dac_l_load,
+        r_load => dac_r_load,
         l_data => dac_l_data,
         r_data => dac_r_data,
-        sdata => dac_sdin
+        data => dac_sdin
     );
 
-    -- process to:
-    -- update next state
-    -- comb through keypad values
-    -- assign tone frequency using constants defined above
-    sm_comb_proc : process (kp_hit, kp_val, clk_50MHz)
+    -- Keypad combing process
+    sm_comb_proc : process (kpd_hit, kpd_val, clk_50MHz)
     begin
-             if kp_hit = '1' then
-                case kp_val is
+             if kpd_hit = '1' then
+                case kpd_val is
                     --when X"0" =>
                     --sm_state <= nx_state;
         
                     when X"1" =>
-                    tn_note <= tone01;
+                    ton_note <= note01;
 
                     when X"2" =>
-                    tn_note <= tone02;
+                    ton_note <= note02;
 
                     when X"3" =>
-                    tn_note <= tone03;
+                    ton_note <= note03;
 
                     when X"A" =>
-                    tn_note <= tone04;
+                    ton_note <= note04;
 
                     when X"4" =>
-                    tn_note <= tone05;
+                    ton_note <= note05;
 
                     when X"5" =>
-                    tn_note <= tone06;
+                    ton_note <= note06;
 
                     when X"6" =>
-                    tn_note <= tone07;
+                    ton_note <= note07;
 
                     when X"B" =>
-                    tn_note <= tone08;
+                    ton_note <= note08;
 
                     when X"7" =>
-                    tn_note <= tone09;
+                    ton_note <= note09;
 
                     when X"8" =>
-                    tn_note <= tone10;
+                    ton_note <= note10;
 
                     when X"9" =>
-                    tn_note <= tone11;
+                    ton_note <= note11;
 
                     when X"C" =>
-                    tn_note <= tone12;
+                    ton_note <= note12;
                     
                     when others =>
-                    tn_note <= tone01;
+                    ton_note <= note01;
                 end case;
             end if;
     end process;

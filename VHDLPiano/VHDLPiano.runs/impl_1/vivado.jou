@@ -1,0 +1,13 @@
+#-----------------------------------------------------------
+# Vivado v2022.1 (64-bit)
+# SW Build 3526262 on Mon Apr 18 15:48:16 MDT 2022
+# IP Build 3524634 on Mon Apr 18 20:55:01 MDT 2022
+# Start of session at: Thu Dec  8 13:30:24 2022
+# Process ID: 10756
+# Current directory: C:/Users/Matthew/Development/VHDLPiano/VHDLPiano.runs/impl_1
+# Command line: vivado.exe -log piano.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source piano.tcl -notrace
+# Log file: C:/Users/Matthew/Development/VHDLPiano/VHDLPiano.runs/impl_1/piano.vdi
+# Journal file: C:/Users/Matthew/Development/VHDLPiano/VHDLPiano.runs/impl_1\vivado.jou
+# Running On: DESKTOP-QF918N6, OS: Windows, CPU Frequency: 1992 MHz, CPU Physical cores: 4, Host memory: 16979 MB
+#-----------------------------------------------------------
+source piano.tcl -notrace
