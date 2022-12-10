@@ -1,8 +1,8 @@
-LIBRARY IEEE;
-USE IEEE.STD_LOGIC_1164.ALL;
-USE IEEE.NUMERIC_STD.ALL;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
-entity dac is
+entity dac_interface is
 	port (
 		clk : in std_logic; -- serial clock (1.56 MHz)
 		l_load : in std_logic; -- strobe to load LEFT data
@@ -11,16 +11,16 @@ entity dac is
 		r_data : in signed (15 downto 0); -- RIGHT data (15-bit signed)
 	    data : out std_logic
         ); -- serial data stream to DAC
-end dac;
+end dac_interface;
 
-architecture Behavioral of dac is
+architecture Behavioral of dac_interface is
 	signal sreg : std_logic_vector (15 downto 0); -- 16-bit shift register to do
 	-- parallel to serial conversion
 begin
 	-- SREG is used to serially shift data out to DAC, MSBit first.
-	-- Left data is loaded into SREG on falling edge of clk when L_load is active.
-	-- Right data is loaded into SREG on falling edge of clk when R_load is active.
-	-- At other times, falling edge of clk causes REG to logically shift one bit left
+	-- Left data is loaded into SREG on falling edge of SCLK when L_start is active.
+	-- Right data is loaded into SREG on falling edge of SCLK when R_start is active.
+	-- At other times, falling edge of SCLK causes REG to logically shift one bit left
 	-- Serial data to DAC is MSBit of SREG
 	dac_proc : process
 	begin
