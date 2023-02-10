@@ -1,2 +1,2 @@
-# cpe-487
-Repository for CPE 487 Digital System Design
+# VHDL Piano
+Repository for CPE 487 Digital System Design final project
